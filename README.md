@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Levitate - AI Website Builder
+
+An intelligent website builder powered by AI that generates custom, production-ready websites from simple text descriptions.
+
+## Project Structure
+
+```
+levitate/
+├── frontend/        # Next.js web application
+├── backend/         # FastAPI server for AI processing
+├── sandbox/         # Docker build runner for safe code execution
+├── templates/       # Pre-built website templates
+├── prompts/         # LLM prompt engineering
+├── infra/           # Deployment and infrastructure configs
+└── README.md
+```
 
 ## Getting Started
 
-First, run the development server:
+### Frontend (Next.js)
 
 ```bash
+cd frontend
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The frontend will be available at `http://localhost:3000`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Backend (FastAPI)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Coming soon...
 
-## Learn More
+### Sandbox
 
-To learn more about Next.js, take a look at the following resources:
+Coming soon...
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Features
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- AI-powered website generation
+- Real-time preview
+- Multiple templates
+- Responsive designs
+- Easy deployment
 
-## Deploy on Vercel
+## Tech Stack
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Frontend**: Next.js, React, TypeScript, Tailwind CSS
+- **Backend**: FastAPI, Python
+- **AI**: OpenAI GPT-4, Claude
+- **Sandbox**: Docker
+- **Deployment**: Vercel, Railway
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+MIT
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
