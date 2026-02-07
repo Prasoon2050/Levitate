@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 
 const Navbar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -19,9 +20,14 @@ const Navbar: React.FC = () => {
           <a href="#solutions" className="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">Solutions</a>
           <a href="#pricing" className="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">Pricing</a>
         </nav>
-        <button className="h-9 px-4 bg-zinc-900 dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 text-sm font-semibold rounded-lg transition-all shadow-sm">
-          Sign Up
-        </button>
+        <div className="flex items-center gap-4">
+          <Link href="/signin" className="text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">
+            Sign In
+          </Link>
+          <Link href="/signup" className="h-9 px-4 bg-zinc-900 dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 text-sm font-semibold rounded-lg transition-all shadow-sm inline-flex items-center">
+            Sign Up
+          </Link>
+        </div>
       </div>
 
       <div className="md:hidden flex items-center">
@@ -37,9 +43,12 @@ const Navbar: React.FC = () => {
           <a href="#product" className="text-sm font-medium text-zinc-600 dark:text-zinc-400 p-2">Product</a>
           <a href="#solutions" className="text-sm font-medium text-zinc-600 dark:text-zinc-400 p-2">Solutions</a>
           <a href="#pricing" className="text-sm font-medium text-zinc-600 dark:text-zinc-400 p-2">Pricing</a>
-          <button className="w-full h-10 bg-zinc-900 dark:bg-white text-white dark:text-black font-semibold rounded-lg">
+          <Link href="/signin" className="w-full h-10 border border-zinc-200 dark:border-border-dark text-zinc-700 dark:text-zinc-200 font-semibold rounded-lg inline-flex items-center justify-center">
+            Sign In
+          </Link>
+          <Link href="/signup" className="w-full h-10 bg-zinc-900 dark:bg-white text-white dark:text-black font-semibold rounded-lg inline-flex items-center justify-center">
             Sign Up
-          </button>
+          </Link>
         </div>
       )}
     </header>

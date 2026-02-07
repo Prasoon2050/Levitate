@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 
 const CTA: React.FC = () => {
   return (
@@ -14,9 +15,9 @@ const CTA: React.FC = () => {
     >
       <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-900 dark:text-white mb-6">Ready to ship?</h2>
       <p className="text-zinc-500 dark:text-zinc-400 mb-8 max-w-lg">Join forward-thinking engineering teams building the next generation of web applications.</p>
-      <button className="h-12 px-8 bg-zinc-900 dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 text-base font-bold rounded-lg transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">
+      <Link href="/signup" className="h-12 px-8 bg-zinc-900 dark:bg-white text-white dark:text-black hover:bg-zinc-800 dark:hover:bg-zinc-200 text-base font-bold rounded-lg transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 inline-flex items-center">
         Start Building for Free
-      </button>
+      </Link>
     </motion.section>
   );
 };
