@@ -67,12 +67,12 @@ class BuildManager:
             "docker", "run",
             "--rm",                                 # Clean up container after run
             "--cpus=1.0",
-            "--memory=512m",
+            "--memory=2048m",
             # "--network=none",                     # TODO: Enable strict network isolation once node_modules are vendored
             "-v", f"{os.path.abspath(project_path)}:/app",
             "-w", "/app",
             self.image_tag,
-            "sh", "-c", "npm install && npm run build"
+            "sh", "-c", "rm -rf node_modules .next && npm install --prefer-offline 2>&1 && npm run build 2>&1"
         ]
 
         logger.info(f"Starting sandboxed build for {project_path}...")

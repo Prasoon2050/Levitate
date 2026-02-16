@@ -4,12 +4,14 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createJob } from '../../utils/api';
 import StatusView from '../StatusView';
+import { supabase } from '../../utils/supabase';
 
 const Hero: React.FC = () => {
   const [placeholder, setPlaceholder] = useState("");
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const prompts = [
     "Create a real estate portal...",
@@ -60,8 +62,19 @@ const Hero: React.FC = () => {
   }, [jobId]);
 
   const handleGenerate = async () => {
+    setError(null);
+
     if (!prompt.trim()) {
-      alert("Please enter a prompt");
+      setError("Please enter a prompt to generate your website.");
+      return;
+    }
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      setError("Please sign in to generate and save projects.");
       return;
     }
 
@@ -72,7 +85,8 @@ const Hero: React.FC = () => {
       setJobId(data.job_id);
     } catch (error) {
       console.error("Error generating code:", error);
-      alert("Failed to start job. Ensure backend is running.");
+      const message = error instanceof Error ? error.message : "Failed to start job";
+      setError(message);
     } finally {
       setIsGenerating(false);
     }
@@ -147,20 +161,23 @@ const Hero: React.FC = () => {
               <button
                 onClick={handleGenerate}
                 disabled={isGenerating}
-                className="hidden sm:flex h-10 px-5 items-center justify-center bg-zinc-900 dark:bg-white text-white dark:text-black font-semibold text-sm rounded-lg hover:opacity-90 transition-opacity whitespace-nowrap ml-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="hidden sm:flex h-10 px-5 items-center justify-center bg-zinc-900 dark:bg-white text-white dark:text-black font-semibold text-sm rounded-lg hover:opacity-90 transition-opacity whitespace-nowrap ml-2 shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isGenerating ? "Initializing..." : "Generate Code"}
               </button>
               <button
                 onClick={handleGenerate}
                 disabled={isGenerating}
-                className="sm:hidden flex size-10 items-center justify-center bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="sm:hidden flex size-10 items-center justify-center bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg ml-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="material-symbols-outlined text-[20px]">
                   {isGenerating ? "hourglass_empty" : "arrow_forward"}
                 </span>
               </button>
             </div>
+            {error && (
+              <p className="mt-3 text-sm text-red-500 dark:text-red-400 text-left">{error}</p>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

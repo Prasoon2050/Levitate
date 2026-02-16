@@ -25,9 +25,49 @@ const STEPS = [
     { id: "DONE", label: "Live" }
 ];
 
+const PHASE_MESSAGES: Record<string, string[]> = {
+    CREATED: [
+        "$ Initializing job...",
+        "$ Queued for processing...",
+    ],
+    PLANNING: [
+        "$ Analyzing your prompt...",
+        "$ Identifying site structure and features...",
+        "$ Creating site architecture...",
+        "$ Defining pages, themes, and components...",
+        "$ Generating site plan...",
+    ],
+    GENERATING: [
+        "$ Site plan ready. Starting code generation...",
+        "$ Writing React/TypeScript components...",
+        "$ Applying Tailwind CSS styles...",
+        "$ Building page layouts...",
+        "$ Generating responsive UI...",
+        "$ Writing app/page.tsx...",
+    ],
+    BUILDING: [
+        "$ Code generation complete. Starting build...",
+        "$ Running npm install...",
+        "$ Installing dependencies...",
+        "$ Running next build...",
+        "$ Compiling TypeScript...",
+        "$ Type-checking components...",
+        "$ Optimizing production bundle...",
+    ],
+    DEPLOYING: [
+        "$ Build successful. Starting deployment...",
+        "$ Uploading to Vercel...",
+        "$ Provisioning edge network...",
+        "$ Configuring CDN...",
+        "$ Finalizing deployment...",
+    ],
+};
+
 export default function StatusView({ jobId, onReset }: StatusViewProps) {
     const [status, setStatus] = useState<JobStatus | null>(null);
-    const [logs, setLogs] = useState<string[]>([]);
+    const [phaseLogs, setPhaseLogs] = useState<string[]>([]);
+    const [phaseLogIndex, setPhaseLogIndex] = useState(0);
+    const [lastPhase, setLastPhase] = useState<string>("");
     const logContainerRef = useRef<HTMLDivElement>(null);
 
     // Polling Effect
@@ -39,39 +79,81 @@ export default function StatusView({ jobId, onReset }: StatusViewProps) {
                 const data = await getJobStatus(jobId);
                 setStatus(data);
 
-                // Append logs if new
                 if (data.status === "DONE" || data.status === "FAILED") {
                     clearInterval(intervalId);
                 }
-
-                // Simple log extraction (in reality backend should send array)
-                if (data.logs) {
-                    setLogs(data.logs.split('\n'));
-                } else if (data.status === "PLANNING") {
-                    setLogs(prev => [...prev, "> Analyzing requirements..."]);
-                } else if (data.status === "GENERATING") {
-                    setLogs(prev => [...prev, "> Writing code..."]);
-                }
-
             } catch (e) {
                 console.error("Polling error", e);
             }
         };
 
         fetchStatus();
-        intervalId = setInterval(fetchStatus, 2000);
+        intervalId = setInterval(fetchStatus, 3000);
 
         return () => clearInterval(intervalId);
     }, [jobId]);
+
+    // Phase-based log simulation
+    useEffect(() => {
+        const currentPhase = status?.status;
+        if (!currentPhase || currentPhase === "DONE" || currentPhase === "FAILED") return;
+
+        // When phase changes, add all messages from the previous phase and start new phase
+        if (currentPhase !== lastPhase) {
+            if (lastPhase && PHASE_MESSAGES[lastPhase]) {
+                // Ensure all previous phase messages are shown
+                setPhaseLogs(prev => {
+                    const prevMessages = PHASE_MESSAGES[lastPhase] || [];
+                    const missing = prevMessages.filter(m => !prev.includes(m));
+                    return [...prev, ...missing];
+                });
+            }
+            setLastPhase(currentPhase);
+            setPhaseLogIndex(0);
+        }
+    }, [status?.status, lastPhase]);
+
+    // Drip-feed messages for the current phase
+    useEffect(() => {
+        const currentPhase = status?.status;
+        if (!currentPhase || currentPhase === "DONE" || currentPhase === "FAILED") return;
+
+        const messages = PHASE_MESSAGES[currentPhase];
+        if (!messages || phaseLogIndex >= messages.length) return;
+
+        const timer = setTimeout(() => {
+            setPhaseLogs(prev => {
+                const msg = messages[phaseLogIndex];
+                if (prev.includes(msg)) return prev;
+                return [...prev, msg];
+            });
+            setPhaseLogIndex(prev => prev + 1);
+        }, phaseLogIndex === 0 ? 500 : 3000 + Math.random() * 2000);
+
+        return () => clearTimeout(timer);
+    }, [status?.status, phaseLogIndex]);
 
     // Auto-scroll logs
     useEffect(() => {
         if (logContainerRef.current) {
             logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
         }
-    }, [logs, status]);
+    }, [phaseLogs, status]);
 
-    const currentStepIndex = STEPS.findIndex(s => s.id === status?.status) || 0;
+    const currentStepIndex = STEPS.findIndex(s => s.id === status?.status) ?? 0;
+
+    // Build the display log: phase logs first, then real logs on completion
+    const displayLog = (() => {
+        if (status?.status === "DONE" || status?.status === "FAILED") {
+            const realLogs = status?.logs || status?.message || "";
+            return [...phaseLogs, "", "---  Build Output  ---", "", realLogs].join("\n");
+        }
+        // Show intermediate logs from backend if available, otherwise phase logs
+        if (status?.logs) {
+            return [...phaseLogs, "", status.logs].join("\n");
+        }
+        return phaseLogs.join("\n");
+    })();
 
     return (
         <div className="w-full max-w-4xl mx-auto flex flex-col gap-8">
@@ -112,10 +194,10 @@ export default function StatusView({ jobId, onReset }: StatusViewProps) {
                         <div className="w-2.5 h-2.5 rounded-full bg-green-500/50"></div>
                         <span className="ml-auto text-zinc-600">build.log</span>
                     </div>
-                    <div ref={logContainerRef} className="flex-1 overflow-y-auto space-y-1 scrollbar-hide">
-                        {status?.logs || status?.message ? (
+                    <div ref={logContainerRef} className="flex-1 overflow-y-auto space-y-1 scrollbar-hide min-h-[300px]">
+                        {displayLog ? (
                             <pre className="whitespace-pre-wrap text-emerald-500/90 font-light">
-                                {status.logs || status.message}
+                                {displayLog}
                             </pre>
                         ) : (
                             <div className="text-zinc-600 italic">Waiting for logs...</div>
@@ -136,7 +218,7 @@ export default function StatusView({ jobId, onReset }: StatusViewProps) {
                                     <span className="material-symbols-outlined text-3xl">rocket_launch</span>
                                 </div>
                                 <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2">Deployed Successfully!</h2>
-                                <a href={status.deploy_url} target="_blank" rel="noopener noreferrer" className="text-emerald-500 hover:text-emerald-400 break-all underline decoration-emerald-500/30 underline-offset-4">
+                                <a href={status.deploy_url} target="_blank" rel="noopener noreferrer" className="text-emerald-500 hover:text-emerald-400 break-all underline decoration-emerald-500/30 underline-offset-4 cursor-pointer">
                                     {status.deploy_url}
                                 </a>
 
@@ -144,13 +226,13 @@ export default function StatusView({ jobId, onReset }: StatusViewProps) {
                                     <a
                                         href={status.deploy_url}
                                         target="_blank"
-                                        className="px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg font-semibold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all text-sm inline-flex items-center gap-2"
+                                        className="px-6 py-3 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-lg font-semibold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all text-sm inline-flex items-center gap-2 cursor-pointer"
                                     >
                                         Open Website <span className="material-symbols-outlined text-sm">open_in_new</span>
                                     </a>
                                     <button
                                         onClick={onReset}
-                                        className="ml-4 px-6 py-3 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors text-sm font-medium"
+                                        className="ml-4 px-6 py-3 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors text-sm font-medium cursor-pointer"
                                     >
                                         Create Another
                                     </button>
@@ -160,12 +242,18 @@ export default function StatusView({ jobId, onReset }: StatusViewProps) {
                             <div className="text-red-500">
                                 <span className="material-symbols-outlined text-4xl mb-2">error</span>
                                 <h3 className="text-lg font-bold">Build Failed</h3>
-                                <button onClick={onReset} className="mt-4 text-sm underline">Try Again</button>
+                                <button onClick={onReset} className="mt-4 text-sm underline cursor-pointer">Try Again</button>
                             </div>
                         ) : (
                             <div className="text-zinc-400 flex flex-col items-center">
                                 <div className="w-12 h-12 border-4 border-zinc-200 dark:border-zinc-800 border-t-emerald-500 rounded-full animate-spin mb-4"></div>
-                                <p className="animate-pulse">Building your vision...</p>
+                                <p className="animate-pulse">
+                                    {status?.status === 'PLANNING' && 'Planning your website...'}
+                                    {status?.status === 'GENERATING' && 'Generating components...'}
+                                    {status?.status === 'BUILDING' && 'Compiling your project...'}
+                                    {status?.status === 'DEPLOYING' && 'Deploying to the cloud...'}
+                                    {(!status?.status || status?.status === 'CREATED') && 'Initializing...'}
+                                </p>
                             </div>
                         )}
                     </div>

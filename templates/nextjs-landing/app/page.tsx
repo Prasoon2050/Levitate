@@ -1,24 +1,17 @@
-"use client";
-
-import Hero from '@/components/Hero';
-import FeaturedProperties from '@/components/FeaturedProperties';
-import PropertyTypeBrowse from '@/components/PropertyTypeBrowse';
-import AgentSpotlight from '@/components/AgentSpotlight';
-import Testimonials from '@/components/Testimonials';
-import CtaAgentsSellers from '@/components/CtaAgentsSellers';
-import Footer from '@/components/Footer';
-import React from 'react';
+import HeroSection from '@/components/HeroSection';
+import AboutSnippet from '@/components/AboutSnippet';
+import SkillsSnippet from '@/components/SkillsSnippet';
+import FeaturedProjects from '@/components/FeaturedProjects';
+import ContactCTA from '@/components/ContactCTA';
 
 export default function Home() {
   return (
-    <main>
-      <Hero />
-      <FeaturedProperties />
-      <PropertyTypeBrowse />
-      <AgentSpotlight />
-      <Testimonials />
-      <CtaAgentsSellers />
-      <Footer />
-    </main>
+    <div className="bg-slate-950 text-slate-200 min-h-screen font-sans antialiased">
+      <HeroSection />
+      <AboutSnippet />
+      <SkillsSnippet />
+      <FeaturedProjects />
+      <ContactCTA />
+    </div>
   );
 }

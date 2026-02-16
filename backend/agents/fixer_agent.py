@@ -46,13 +46,23 @@ class FixerAgent(BaseAgent[ProjectFiles]):
         ```
         {msg_logs}
         ```
-        
+
         # CURRENT FILE CONTENT
         ```json
         {files_str}
         ```
-        
+
         Please provide the fixed versions of the files that caused the error.
+        
+        # OUTPUT FORMAT
+        Return ONLY valid JSON with this exact structure:
+        {
+          "files": {
+            "path/to/file.tsx": "file content string",
+            "components/Another.tsx": "another file content"
+          }
+        }
+        Do NOT return a list. Return a dictionary of file paths to content.
         """
         
         return self.run(prompt, ProjectFiles)

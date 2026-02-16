@@ -19,6 +19,7 @@ class UiAgent(BaseAgent[ProjectFiles]):
         - Do NOT import from '@/components/ui/*' or any other custom component library. 
         - DO NOT import { Button } or { Card }. BUILD THEM FROM SCRATCH using HTML tags (button, div) and Tailwind classes.
         - Do NOT change dependencies (no new npm packages).
+        - Do NOT use 'react-icons'. Use 'lucide-react' ONLY.
         
         # EXAMPLES
         INCORRECT: `import { Button } from '@/components/ui/button';`
