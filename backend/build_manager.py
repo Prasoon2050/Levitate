@@ -63,28 +63,35 @@ class BuildManager:
         # - Network: Allow for now (npm install), but strict sandbox would imply 'none' + vendoring.
         # - Volume: Mount project_path to /app
         
+        # Use a single shell command string to ensure proper chaining
+        # npm install && npm run build
+        # We catch potential errors by combining stdout/stderr
+        build_command = "npm install && npm run build"
+        
         cmd = [
             "docker", "run",
-            "--rm",                                 # Clean up container after run
+            "--rm",
             "--cpus=1.0",
             "--memory=2048m",
-            # "--network=none",                     # TODO: Enable strict network isolation once node_modules are vendored
             "-v", f"{os.path.abspath(project_path)}:/app",
             "-w", "/app",
             self.image_tag,
-            "sh", "-c", "rm -rf node_modules .next && npm install --prefer-offline 2>&1 && npm run build 2>&1"
+            "/bin/sh", "-c", build_command
         ]
 
-        logger.info(f"Starting sandboxed build for {project_path}...")
+        logger.info(f"Starting sandboxed build for {project_path} with command: {build_command}")
+        
         try:
+            # Run without capture_output=True first to stream? No, we need logs for the fixer.
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                check=False # We handle return code manually
+                check=False 
             )
             
-            logs = f"STDOUT:\n{result.stdout}\n\nSTDERR:\n{result.stderr}"
+            # Combine formatting
+            logs = f"COMMAND: {' '.join(cmd)}\n\nEXIT CODE: {result.returncode}\n\nSTDOUT:\n{result.stdout}\n\nSTDERR:\n{result.stderr}"
             
             if result.returncode == 0:
                 logger.info("Build successful.")

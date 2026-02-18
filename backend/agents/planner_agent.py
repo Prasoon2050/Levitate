@@ -16,6 +16,11 @@ class PlannerAgent(BaseAgent[SitePlan]):
            - Title
            - Description
            - Key Features (list of sections/functionalities)
+        5. A list of AI-Generated Images required (limit to 3-5 high-impact images like Hero background, Feature illustrations):
+           - Description: Detailed prompt for an AI image generator (e.g. 'A modern office with glass walls, soft lighting, 4k render').
+           - Filename: e.g. 'hero-bg.png'.
+           - Usage: e.g. 'hero_section'.
+           - Alt: Accessible description.
 
         OUTPUT FORMAT:
         You must return ONLY a valid JSON object strictly matching the SitePlan schema.
@@ -32,6 +37,14 @@ class PlannerAgent(BaseAgent[SitePlan]):
               "title": "Home",
               "description": "Landing page",
               "features": ["Hero", "Features", "Footer"]
+            }
+          ],
+          "images": [
+            {
+              "description": "A futuristic city skyline at sunset, cyberpunk style, neon lights",
+              "filename": "hero-bg.png",
+              "alt": "Futuristic city skyline",
+              "usage": "hero_background"
             }
           ]
         }

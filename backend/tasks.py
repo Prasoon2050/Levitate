@@ -5,6 +5,7 @@ from worker import celery_app
 from agents.planner_agent import PlannerAgent
 from agents.ui_agent import UiAgent
 from agents.fixer_agent import FixerAgent
+from agents.image_agent import ImageAgent
 from build_manager import BuildManager
 from deployment_manager import DeploymentManager
 
@@ -43,12 +44,38 @@ def generate_website(self, prompt: str):
         update_state(JOB_STATES["PLANNING"], f"Site plan ready: {site_plan.site_name} — {len(site_plan.pages)} page(s), {total_features} section(s)")
         time.sleep(1)
 
-        # Generating
-        update_state(JOB_STATES["GENERATING"], "Starting code generation...")
-
         # Directory setup
         base_dir = os.path.dirname(os.path.abspath(__file__))
         template_dir = os.path.join(base_dir, "..", "templates", "nextjs-landing")
+
+        # Image Generation (Before Code Gen)
+        if site_plan.images:
+            update_state(JOB_STATES["GENERATING"], f"Generating {len(site_plan.images)} AI images...")
+            image_agent = ImageAgent()
+            images_dir = os.path.join(template_dir, "public", "images")
+            os.makedirs(images_dir, exist_ok=True)
+            
+            generated_count = 0
+            for img_spec in site_plan.images:
+                update_state(JOB_STATES["GENERATING"], f"Generating image: {img_spec.filename}...")
+                
+                # Sanitize filename
+                safe_filename = os.path.basename(img_spec.filename)
+                output_path = os.path.join(images_dir, safe_filename)
+                
+                result = image_agent.generate_image(img_spec.description, output_path)
+                if result:
+                    generated_count += 1
+                else:
+                    # FALLBACK: If generation fails, update the filename to a placeholder URL
+                    # This ensures UiAgent uses a working URL instead of a broken local file
+                    print(f"Image generation failed for {safe_filename}. Switching to placeholder.")
+                    img_spec.filename = f"https://placehold.co/1200x600?text={safe_filename.split('.')[0]}"
+            
+            update_state(JOB_STATES["GENERATING"], f"Generated {generated_count}/{len(site_plan.images)} images.")
+
+        # Generating Code
+        update_state(JOB_STATES["GENERATING"], "Starting code generation...")
 
         # Ensure components directory is clean
         components_dir = os.path.join(template_dir, "components")
@@ -65,11 +92,21 @@ def generate_website(self, prompt: str):
         files_written = []
         # STRICT ALLOW-LIST ENFORCEMENT
         for file_path, code in project_files.files.items():
-            # Validate path
-            is_valid_component = file_path.startswith("components/") and file_path.endswith(".tsx")
-            is_valid_page = file_path == "app/page.tsx"
+            # Validate path - ALLOWED DIRECTORIES
+            # We strictly whitelist the directories where code can be written
+            is_valid_app = file_path.startswith("app/") and not file_path.startswith("app/api/") # Allow pages, layouts, globals.css
+            is_valid_component = file_path.startswith("components/")
+            is_valid_lib = file_path.startswith("lib/") or file_path.startswith("utils/") or file_path.startswith("types/")
+            is_valid_public = file_path.startswith("public/") # Allow static assets if agent generates them (e.g. svg icons)
+            
+            # BLOCK LIST - Do not allow overwriting these if agent tries to
+            # We specifically block binary image extensions if the content looks like text (hallucination check)
+            is_image = file_path.endswith(".png") or file_path.endswith(".jpg") or file_path.endswith(".jpeg")
+            if is_image:
+                 print(f"SECURITY WARNING: Agent attempted to write image file {file_path}. SKIPPING (Images are handled by ImageAgent).")
+                 continue
 
-            if not (is_valid_component or is_valid_page):
+            if not (is_valid_app or is_valid_component or is_valid_lib or is_valid_public):
                 print(f"SECURITY WARNING: Agent attempted to write to restricted file: {file_path}. SKIPPING.")
                 continue
 
@@ -89,7 +126,7 @@ def generate_website(self, prompt: str):
                 f.write(code)
             files_written.append(file_path)
             print(f"Wrote file: {file_path}")
-            update_state(JOB_STATES["GENERATING"], f"Generated {len(files_written)} file(s): {', '.join(files_written)}")
+            update_state(JOB_STATES["GENERATING"], f"Generated {len(files_written)} file(s)")
 
 
 
