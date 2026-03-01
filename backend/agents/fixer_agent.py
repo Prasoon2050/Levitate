@@ -16,10 +16,13 @@ class FixerAgent(BaseAgent[ProjectFiles]):
         
         # COMMON ERROR TYPES TO LOOK FOR
         1. **Missing Components**: If a file imports a component that doesn't exist, CREATE the missing component file.
-        2. **Import Errors**: Fix relative paths (e.g., `../../components` vs `../components`).
+        2. **Import Errors**: Fix relative paths. Use `@/components/ComponentName` for component imports.
         3. **Type Errors**: Fix TypeScript interface mismatches.
         4. **Client/Server Mismatches**: Add `"use client";` to components using hooks (useState, useEffect, onClick).
-        5. **Missing UI Libraries**: If `lucide-react` or `framer-motion` is missing, ensure the code uses them correctly or replaces them.
+        5. **Missing Libraries**: Only `lucide-react` is available for icons. Do NOT use `framer-motion`, `react-icons`, or `@/components/ui/*`.
+        6. **Image Imports**: Use `<img>` tags, NOT `next/image` `Image` component. The project uses `output: 'export'` with `unoptimized: true`.
+        7. **Tailwind v4**: The project uses Tailwind CSS v4 with `@tailwindcss/postcss`. There is NO `tailwind.config` file. Do NOT reference custom theme values.
+        8. **Multi-page routes**: The project may have multiple pages under `app/<slug>/page.tsx`. Ensure imports resolve correctly for all pages.
         
         # CONSTRAINTS
         - You MUST return a valid JSON object matching the `ProjectFiles` schema.

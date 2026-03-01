@@ -17,8 +17,8 @@ class PlannerAgent(BaseAgent[SitePlan]):
            - Description
            - Key Features (list of sections/functionalities)
         5. A list of AI-Generated Images required (limit to 3-5 high-impact images like Hero background, Feature illustrations):
-           - Description: Detailed prompt for an AI image generator (e.g. 'A modern office with glass walls, soft lighting, 4k render').
-           - Filename: e.g. 'hero-bg.png'.
+           - Description: Detailed prompt for an AI image generator. Be specific and visual (e.g. 'A modern minimalist office space with large windows, natural light, indoor plants, clean white desk, photorealistic, 4k, professional photography').
+           - Filename: e.g. 'hero-bg.png'. MUST end in .png.
            - Usage: e.g. 'hero_section'.
            - Alt: Accessible description.
 

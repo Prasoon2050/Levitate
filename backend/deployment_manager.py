@@ -12,18 +12,43 @@ class DeploymentManager:
     def __init__(self, token: str):
         self.token = token
 
-    def deploy(self, project_path: str) -> Tuple[bool, str, Optional[str]]:
+    def _slugify(self, name: str) -> str:
+        """Convert a name into a Vercel-safe project slug."""
+        import re
+        slug = name.lower().strip()
+        slug = re.sub(r'[^a-z0-9]+', '-', slug)  # Replace non-alphanumeric with hyphens
+        slug = slug.strip('-')  # Remove leading/trailing hyphens
+        return slug or 'levitate'
+
+    def _write_vercel_config(self, project_path: str, project_name: str) -> None:
+        """Write a vercel.json with the project name to control the deployment name."""
+        import json
+        config = {
+            "version": 2,
+            "name": project_name
+        }
+        config_path = os.path.join(project_path, "vercel.json")
+        with open(config_path, "w") as f:
+            json.dump(config, f, indent=2)
+        logger.info(f"Wrote vercel.json with name: {project_name}")
+
+    def deploy(self, project_path: str, project_name: str = "levitate") -> Tuple[bool, str, Optional[str]]:
         """
         Deploys the static assets (out/ or .next/) to Vercel.
         
         Args:
             project_path: Absolute path to the generated Next.js project.
+            project_name: Name for the Vercel project (default: 'levitate').
             
         Returns:
             Tuple[bool, str, str]: (Success, Logs, URL)
         """
         if not os.path.exists(project_path):
             return False, f"Project path does not exist: {project_path}", None
+
+        # Write vercel.json with project name to override directory-based naming
+        slug = self._slugify(project_name)
+        self._write_vercel_config(project_path, slug)
 
         # Vercel Deployment Command
         # We deploy the 'project_path' directly.

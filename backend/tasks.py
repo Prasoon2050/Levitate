@@ -5,7 +5,7 @@ from worker import celery_app
 from agents.planner_agent import PlannerAgent
 from agents.ui_agent import UiAgent
 from agents.fixer_agent import FixerAgent
-from agents.image_agent import ImageAgent
+# from agents.image_agent import ImageAgent  # disabled until image generation is re-enabled
 from build_manager import BuildManager
 from deployment_manager import DeploymentManager
 
@@ -48,40 +48,56 @@ def generate_website(self, prompt: str):
         base_dir = os.path.dirname(os.path.abspath(__file__))
         template_dir = os.path.join(base_dir, "..", "templates", "nextjs-landing")
 
-        # Image Generation (Before Code Gen)
+        # Image Generation (Before Code Gen) — temporarily disabled
+        # TODO: Re-enable when image generation is ready
+        # Replace all image filenames with placeholder URLs so UiAgent has working references
         if site_plan.images:
-            update_state(JOB_STATES["GENERATING"], f"Generating {len(site_plan.images)} AI images...")
-            image_agent = ImageAgent()
-            images_dir = os.path.join(template_dir, "public", "images")
-            os.makedirs(images_dir, exist_ok=True)
-            
-            generated_count = 0
             for img_spec in site_plan.images:
-                update_state(JOB_STATES["GENERATING"], f"Generating image: {img_spec.filename}...")
-                
-                # Sanitize filename
-                safe_filename = os.path.basename(img_spec.filename)
-                output_path = os.path.join(images_dir, safe_filename)
-                
-                result = image_agent.generate_image(img_spec.description, output_path)
-                if result:
-                    generated_count += 1
-                else:
-                    # FALLBACK: If generation fails, update the filename to a placeholder URL
-                    # This ensures UiAgent uses a working URL instead of a broken local file
-                    print(f"Image generation failed for {safe_filename}. Switching to placeholder.")
-                    img_spec.filename = f"https://placehold.co/1200x600?text={safe_filename.split('.')[0]}"
-            
-            update_state(JOB_STATES["GENERATING"], f"Generated {generated_count}/{len(site_plan.images)} images.")
+                safe_name = img_spec.filename.split('.')[0]
+                img_spec.filename = f"https://placehold.co/1200x630?text={safe_name}"
+            update_state(JOB_STATES["GENERATING"], "Using placeholder images (image generation disabled).")
+
+        # if site_plan.images:
+        #     update_state(JOB_STATES["GENERATING"], f"Generating {len(site_plan.images)} AI images...")
+        #     image_agent = ImageAgent()
+        #     images_dir = os.path.join(template_dir, "public", "images")
+        #     os.makedirs(images_dir, exist_ok=True)
+        #
+        #     generated_count = 0
+        #     for img_spec in site_plan.images:
+        #         update_state(JOB_STATES["GENERATING"], f"Generating image: {img_spec.filename}...")
+        #
+        #         # Sanitize filename
+        #         safe_filename = os.path.basename(img_spec.filename)
+        #         output_path = os.path.join(images_dir, safe_filename)
+        #
+        #         result = image_agent.generate_image(img_spec.description, output_path)
+        #         if result:
+        #             generated_count += 1
+        #         else:
+        #             print(f"Image generation failed for {safe_filename}. Switching to placeholder.")
+        #             img_spec.filename = f"https://placehold.co/1200x600?text={safe_filename.split('.')[0]}"
+        #
+        #     update_state(JOB_STATES["GENERATING"], f"Generated {generated_count}/{len(site_plan.images)} images.")
 
         # Generating Code
         update_state(JOB_STATES["GENERATING"], "Starting code generation...")
 
-        # Ensure components directory is clean
+        # Clean generated directories so old pages/components don't persist
         components_dir = os.path.join(template_dir, "components")
         if os.path.exists(components_dir):
             shutil.rmtree(components_dir)
         os.makedirs(components_dir)
+
+        # Clean app/ subdirectories (page routes from previous builds)
+        # but preserve layout.tsx, globals.css, page.tsx (root files)
+        app_dir = os.path.join(template_dir, "app")
+        if os.path.exists(app_dir):
+            for item in os.listdir(app_dir):
+                item_path = os.path.join(app_dir, item)
+                if os.path.isdir(item_path):
+                    shutil.rmtree(item_path)
+                    print(f"Cleaned old page route: app/{item}/")
 
         ui_agent = UiAgent()
 
@@ -208,8 +224,10 @@ def generate_website(self, prompt: str):
         else:
             deployer = DeploymentManager(vercel_token)
             print("Starting deployment...")
-            update_state(JOB_STATES["DEPLOYING"], "Deploying to Vercel edge network...")
-            d_success, d_logs, deploy_url = deployer.deploy(template_dir)
+            # Use the site plan name for the Vercel project; fall back to 'levitate'
+            deploy_name = site_plan.site_name if site_plan.site_name else "levitate"
+            update_state(JOB_STATES["DEPLOYING"], f"Deploying '{deploy_name}' to Vercel edge network...")
+            d_success, d_logs, deploy_url = deployer.deploy(template_dir, project_name=deploy_name)
 
             if not d_success:
                 print(f"Deployment FAILED. Logs: {d_logs}")
