@@ -1,6 +1,8 @@
 import time
 import os
 import shutil
+import tempfile
+from pathlib import Path
 from worker import celery_app
 from agents.planner_agent import PlannerAgent
 from agents.ui_agent import UiAgent
@@ -26,7 +28,12 @@ JOB_STATES = {
 def generate_website(self, prompt: str):
     """
     Background task for website generation lifecycle.
+    Per-job isolated builds: each job gets its own temp directory copy of the template.
     """
+    # Get job ID for logging and directory isolation
+    job_id = self.request.id
+    temp_work_dir = None
+    
     # Helper to update state with optional log messages
     def update_state(state, logs=""):
         self.update_state(state=state, meta={"status": state, "logs": logs})
@@ -36,6 +43,20 @@ def generate_website(self, prompt: str):
         update_state(JOB_STATES["CREATED"])
         time.sleep(1)
 
+        # ===== CREATE ISOLATED TEMP DIRECTORY FOR THIS JOB =====
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        template_source = os.path.join(base_dir, "..", "templates", "nextjs-landing")
+        
+        # Create temp directory with job ID in name for debugging
+        temp_work_dir = tempfile.mkdtemp(prefix=f"levitate-job-{job_id[:8]}-")
+        template_dir = os.path.join(temp_work_dir, "nextjs-landing")
+        
+        # Copy entire template to temp directory (ensures isolation)
+        print(f"Creating isolated build environment for job {job_id}")
+        print(f"Temp directory: {temp_work_dir}")
+        shutil.copytree(template_source, template_dir)
+        print(f"Template copied to: {template_dir}")
+        
         # Planning
         update_state(JOB_STATES["PLANNING"], "Analyzing prompt and creating site architecture...")
 
@@ -45,10 +66,6 @@ def generate_website(self, prompt: str):
         total_features = sum(len(p.features) for p in site_plan.pages)
         update_state(JOB_STATES["PLANNING"], f"Site plan ready: {site_plan.site_name} — {len(site_plan.pages)} page(s), {total_features} section(s)")
         time.sleep(1)
-
-        # Directory setup
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        template_dir = os.path.join(base_dir, "..", "templates", "nextjs-landing")
 
         # Image Generation (Before Code Gen) — temporarily disabled
         # TODO: Re-enable when image generation is ready
@@ -292,5 +309,16 @@ def generate_website(self, prompt: str):
         }
 
     except Exception as e:
+        print(f"ERROR in job {job_id}: {str(e)}")
         self.update_state(state=JOB_STATES["FAILED"], meta={"error": str(e)})
         raise e
+    
+    finally:
+        # ===== CLEANUP: Remove isolated temp directory =====
+        if temp_work_dir and os.path.exists(temp_work_dir):
+            try:
+                print(f"Cleaning up temp directory: {temp_work_dir}")
+                shutil.rmtree(temp_work_dir)
+                print(f"Temp directory cleaned for job {job_id}")
+            except Exception as cleanup_error:
+                print(f"WARNING: Failed to cleanup temp directory {temp_work_dir}: {cleanup_error}")
