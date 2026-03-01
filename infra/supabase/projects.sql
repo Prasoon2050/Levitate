@@ -6,6 +6,7 @@ create table if not exists public.projects (
   job_id text not null unique,
   prompt text not null,
   status text not null,
+  github_url text,
   deploy_url text,
   logs text,
   result jsonb,

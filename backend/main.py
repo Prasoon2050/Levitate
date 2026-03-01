@@ -34,6 +34,7 @@ class StatusResponse(BaseModel):
     status: str
     message: Optional[str] = None
     logs: Optional[str] = None
+    github_url: Optional[str] = None
     deploy_url: Optional[str] = None
     result: Optional[dict] = None
 
@@ -128,13 +129,17 @@ async def get_status(job_id: str, user: Any = Depends(get_current_user)):
 
     status, message, logs, result_data = _resolve_task_snapshot(job_id)
     deploy_url: str | None = None
+    github_url: str | None = None
 
     if result_data:
         deploy_url = result_data.get("deploy_url")
+        github_url = result_data.get("github_url")
 
     update_payload: dict[str, Any] = {"status": status}
     if deploy_url:
         update_payload["deploy_url"] = deploy_url
+    if github_url:
+        update_payload["github_url"] = github_url
     if result_data is not None:
         update_payload["result"] = result_data
     if logs is not None:
@@ -149,6 +154,7 @@ async def get_status(job_id: str, user: Any = Depends(get_current_user)):
         status=status,
         message=message,
         logs=logs,
+        github_url=github_url,
         deploy_url=deploy_url,
         result=result_data,
     )

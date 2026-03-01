@@ -7,6 +7,7 @@ from agents.ui_agent import UiAgent
 from agents.fixer_agent import FixerAgent
 # from agents.image_agent import ImageAgent  # disabled until image generation is re-enabled
 from build_manager import BuildManager
+from github_manager import GitHubManager
 from deployment_manager import DeploymentManager
 
 # Job States
@@ -15,6 +16,7 @@ JOB_STATES = {
     "PLANNING": "PLANNING",
     "GENERATING": "GENERATING",
     "BUILDING": "BUILDING",
+    "PUSHING_TO_GITHUB": "PUSHING_TO_GITHUB",
     "DEPLOYING": "DEPLOYING",
     "DONE": "DONE",
     "FAILED": "FAILED",
@@ -213,6 +215,43 @@ def generate_website(self, prompt: str):
                 "plan": site_plan.model_dump()
             }
 
+        # Pushing to GitHub
+        update_state(JOB_STATES["PUSHING_TO_GITHUB"], "Pushing code to GitHub repository...")
+
+        github_token = os.getenv("GITHUB_TOKEN")
+        github_owner = os.getenv("GITHUB_OWNER")
+        github_repo_prefix = os.getenv("GITHUB_REPO_PREFIX", "levitate-site-")
+        
+        github_url = None
+        github_logs = "GitHub push skipped (credentials not configured)"
+        
+        if github_token and github_owner:
+            try:
+                # Generate repo name from site name
+                repo_name = f"{github_repo_prefix}{site_plan.site_name.lower().replace(' ', '-')}" if site_plan.site_name else f"{github_repo_prefix}generated"
+                
+                print(f"Starting GitHub push to {github_owner}/{repo_name}...")
+                github_manager = GitHubManager(github_token, github_owner, repo_name)
+                
+                update_state(JOB_STATES["PUSHING_TO_GITHUB"], f"Pushing to GitHub repository: {repo_name}...")
+                g_success, g_logs, github_url = github_manager.push_to_github(template_dir, site_plan.site_name)
+                github_logs = g_logs
+                
+                if not g_success:
+                    print(f"GitHub push FAILED. Logs: {g_logs}")
+                    update_state(JOB_STATES["PUSHING_TO_GITHUB"], f"GitHub push failed, continuing with deployment anyway...")
+                    print("WARNING: GitHub push failed, but continuing with Vercel deployment...")
+                else:
+                    print(f"GitHub push SUCCESS: {github_url}")
+                    update_state(JOB_STATES["PUSHING_TO_GITHUB"], f"Successfully pushed to GitHub: {github_url}")
+                    
+            except Exception as github_error:
+                print(f"GitHub manager error: {github_error}")
+                github_logs = str(github_error)
+                update_state(JOB_STATES["PUSHING_TO_GITHUB"], f"GitHub push error (continuing): {github_error}")
+        else:
+            print("WARNING: GITHUB_TOKEN or GITHUB_OWNER not found. Skipping GitHub push.")
+
         # Deploying
         update_state(JOB_STATES["DEPLOYING"], "Uploading to Vercel...")
 
@@ -248,6 +287,7 @@ def generate_website(self, prompt: str):
             "prompt": prompt,
             "plan": site_plan.model_dump(),
             "build_logs": logs,
+            "github_url": github_url,
             "deploy_url": deploy_url
         }
 
